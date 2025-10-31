@@ -1,5 +1,5 @@
 ---
-alwaysApply: true
+alwaysApply: false
 ---
 
 ruleType: Agent Requested
@@ -8,9 +8,26 @@ purpose: Canonicalize how to **create & use LaunchDarkly feature flags** in a re
 
 # Cursor Rule — LaunchDarkly Feature Flags
 
-> **Goal**: When asked to create a new feature flag, *generate everything end‑to‑end*:
+> **⚠️ IMPORTANT: Feature flags are OPTIONAL** — Only apply feature flagging when the user **explicitly requests** a feature flag or asks to gate/control a feature behind a flag. Do **not** proactively suggest or add feature flags unless specifically asked.
+>
+> **Goal**: When **explicitly asked** to create a new feature flag, *generate everything end‑to‑end*:
 >
 > 1. a **consistent key** (dot.case), 2) an **LD API payload** (JSON), 3) **code scaffolding** (typed key constants + React usage), 4) **docs & checks**.
+
+## When to use feature flags
+
+**Only apply these rules when:**
+- User explicitly requests: "Create a feature flag for...", "Add a feature flag...", "Gate this behind a flag..."
+- User asks to control/gate a feature: "Make this feature flaggable", "Allow toggling this feature"
+- User mentions needing to roll out gradually or control feature visibility
+
+**Do NOT apply these rules when:**
+- User asks to implement a feature normally (without mentioning flags)
+- User wants to add functionality without feature gating
+- User mentions "feature" but doesn't explicitly request flagging
+- Implementing new functionality unless explicitly asked to use flags
+
+**When in doubt, implement features normally without flags unless explicitly requested.**
 
 ## Naming standard (authoritative)
 
@@ -206,6 +223,7 @@ The assistant must output the 4 artifacts above, with the canonical key:
 
 ## Don'ts
 
+* ❌ **Don't proactively suggest or add feature flags** — Only use flags when explicitly requested by the user.
 * ❌ Don't create keys with hyphens.
 * ❌ Don't omit `.enabled` for boolean flags.
 * ❌ Don't create flags without checking for existing duplicates first.
