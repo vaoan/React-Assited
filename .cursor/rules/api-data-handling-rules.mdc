@@ -1,0 +1,106 @@
+---
+description: Strong, type-safe data access via adapters on top of Apollo/GraphQL, with caching, pagination and robust error handling.
+globs: src/**/*.{ts,tsx}
+alwaysApply: true
+---
+
+- **Access data through application adapters only**
+
+  - Keep UI unaware of GraphQL details. UI calls `application/adapters/*` which use generated hooks.
+  - Co-locate transformation in `application/mappers` before returning to UI.
+  - Reference: [apollo/client.ts](mdc:src/common/infrastructure/gql/apollo/client.ts)
+
+- **Use GraphQL Codegen hooks for type safety**
+
+  - Generate hooks/types to `src/common/infrastructure/gql/generated/` via `codegen.ts`.
+  - Prefer generated hooks over manual `useQuery`/`useMutation` to reduce drift.
+
+- **Avoid over-fetching; design minimal queries**
+
+  - Select only required fields; paginate large lists by cursor/offset.
+  - Use Apollo cache policies and `fetchPolicy: 'cache-first'` by default; switch to `network-only` for refetch flows.
+
+- **Batch and deduplicate network calls**
+
+  - Consolidate repeated reads into a single adapter call; reuse Apollo cache results.
+  - Prefer server-driven pagination and filters to reduce payload size.
+
+- **Standard error handling and UX**
+
+  - Surface GraphQL errors via Error Boundaries and toast/snackbar messages.
+  - Map server errors to friendly copy; never expose raw stack traces.
+
+- **Optimistic UI and refetch policies when safe**
+
+  - Use optimistic updates for simple mutations (create/update/delete) and reconcile via cache updates.
+  - After mutations that affect lists, update cache with `update` or minimally `refetchQueries`.
+
+- **Testing**
+
+  - Mock GraphQL in unit/integration tests; keep fixtures under `__mocks__` or module `mocks/`.
+
+- **Example adapter pattern**
+
+```typescript
+// src/users/application/adapters/listUsers.ts
+import { useUsersListQuery } from '@/common/infrastructure/gql/generated/schema';
+import { mapUserList } from '../mappers/filterSortMapper';
+
+export function useListUsersAdapter(params: { take: number; search?: string }) {
+  const { data, loading, error, refetch } = useUsersListQuery({ variables: { take: params.take, search: params.search ?? '' } });
+  return {
+    users: mapUserList(data?.users ?? []),
+    loading,
+    error,
+    refetch
+  };
+}
+```
+
+- **Pagination guidance**
+
+  - Prefer server pagination and infinite scrolling for large lists; virtualize long tables.
+  - Keep page size sensible (e.g., 25–100). Avoid client-only slicing of large results.
+
+- **React Query (REST integration)**
+  - Use React Query for REST endpoints or non-GraphQL integrations.
+  - Standardize cache keys (`['feature', params]`) and set a sensible `staleTime` to avoid excess refetching.
+  - Handle errors consistently (toasts + fallback UI) and invalidate queries after mutations.
+
+```typescript
+// src/products/application/adapters/useProductSearch.ts
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+
+type Product = { id: string; name: string };
+
+async function fetchProducts(search: string): Promise<Product[]> {
+  const res = await fetch(`/api/products?search=${encodeURIComponent(search)}`);
+  if (!res.ok) throw new Error('Failed to load products');
+  return res.json();
+}
+
+export function useProductSearchAdapter(params: { search: string }) {
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['products', 'search', params.search],
+    queryFn: () => fetchProducts(params.search),
+    staleTime: 60_000,
+    retry: 1
+  });
+
+  const queryClient = useQueryClient();
+  const createProduct = useMutation({
+    mutationFn: async (payload: { name: string }) => {
+      const res = await fetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error('Create failed');
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['products'] })
+  });
+
+  return { products: data ?? [], isLoading, error, refetch, createProduct };
+}
+```

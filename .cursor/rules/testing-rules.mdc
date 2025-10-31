@@ -1,0 +1,33 @@
+---
+description: Reliable tests: focused unit tests, MSW-backed integration tests, and selective E2E.
+globs: src/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+- Test business logic thoroughly
+- Mock external dependencies
+- Test user interactions
+- Write tests for edge cases
+- Ensure individual functions work correctly
+- Test buttons, form submissions, and UI state changes
+- Use snapshots to detect unexpected UI changes
+- Simulate GraphQL calls using mocks maybe msw (Mock Service Worker)
+- Use Cypress or Playwright to test complete user workflows
+- When running tests, you should use the command `npm test -- --run <file_or_folder_location>`
+- Use Vitest for all tests as a test library
+- For tests failing proceed with a systematic approach. Use a Divide-and-Conquer and fix each test failing systematically.
+
+- **Unit vs Integration**
+
+  - Unit-test domain and pure functions without React. Integration-test adapters and pages with MSW.
+
+- **React Testing Library**
+
+  - Prefer queries by role/label text. Avoid test IDs unless necessary. Assert visible behavior.
+
+- **GraphQL/MSW**
+
+  - Centralize handlers per feature (query/mutation success + error). Reuse fixtures.
+
+- **Coverage & speed**
+  - Target high coverage on critical modules (auth, products create, orders). Keep tests deterministic.

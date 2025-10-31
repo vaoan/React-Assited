@@ -1,0 +1,35 @@
+---
+description: Strict, ergonomic TypeScript with strong types, safe APIs, and clean module boundaries.
+globs: src/**/*.{ts,tsx}
+alwaysApply: true
+---
+
+- No any types
+- Define interfaces for all props
+- Use type inference when possible
+- Create shared type definitions for domain entities
+- Avoid relative imports like these
+
+  ```
+  import { ProductType } from '../../../../../../domain/entities/ProductTypes';
+  import { getProductIcon } from '../../../../../../infrastructure/utils/productUtils';
+  ```
+
+  It is hard to read and it can lead to import issues.
+
+- **Types first**
+
+  - Prefer `type`/`interface` exports from `domain` and reuse across layers.
+  - Avoid `any` and `unknown` unless narrowed immediately.
+
+- **APIs**
+
+  - Type function inputs/outputs explicitly in exported APIs; let locals infer.
+  - Avoid optional fields when they are actually required—model invariants precisely.
+
+- **Enums vs unions**
+
+  - Prefer union string literals over enums for flexibility and tree-shaking.
+
+- **Nullability**
+  - Minimize `null`/`undefined` surface area. Use narrowing and default values early.

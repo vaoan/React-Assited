@@ -1,0 +1,31 @@
+---
+description: Consistent, readable TypeScript and React code style aligned with ESLint/Prettier and project conventions.
+globs: src/**/*.{ts,tsx}
+alwaysApply: true
+---
+
+- Use meaningful variable names
+- Follow existing ESLint/Prettier configs
+- Prefer functional components
+- Use async/await for promises
+- Keep the code modular with well-defined layers (Application, Domain, Infrastructure, Main, Presentation).
+- Organize code by feature rather than type (e.g., users module instead of separate folders for components, hooks, and services).
+- Each file should follow the Single Responsibility Principle (SRP).
+
+- **Formatting & imports**
+
+  - Use path aliases (`@/…`) instead of deep relative imports.
+  - Group imports: external libs, internal modules, local files; then types.
+
+- **React patterns**
+
+  - Keep components under 200 lines; extract hooks/components where needed.
+
+- **Naming**
+
+  - Components: `PascalCase`; hooks: `useFoo`; types/interfaces: `PascalCase`.
+  - Avoid abbreviations; prefer descriptive names (e.g., `productId`).
+
+- **Error and boundary**
+  - Prefer early returns; avoid deep nesting. Only catch exceptions with meaningful handling.
+  - NEVER nest ternary operators.

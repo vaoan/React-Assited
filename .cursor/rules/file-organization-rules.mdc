@@ -1,0 +1,25 @@
+---
+description: Feature-first structure with co-location, stable module boundaries, and consistent naming.
+globs: src/**/*
+alwaysApply: true
+---
+
+- Group files by feature/domain
+- Keep related files close together
+- Use consistent naming conventions
+- Organize imports with external libs first
+- Split component logic across multiple simple functions
+
+- **Module boundaries**
+
+  - `domain` must not import from `infrastructure` or `presentation`.
+  - `presentation` imports from `application` adapters, not raw GraphQL.
+
+- **Co-location**
+
+  - Keep tests next to source (`*.test.ts(x)`) when possible.
+  - Keep mocks/fixtures inside the feature (`mocks/`) for discoverability.
+
+- **Aliases**
+
+  - Prefer `@/` path aliases to avoid brittle relative paths.

@@ -1,0 +1,24 @@
+---
+description: Ship responsive UIs with code splitting, memoization, virtualization, and smart caching.
+globs: src/**/*.{ts,tsx}
+alwaysApply: true
+---
+
+- Memoize expensive computations
+- Implement proper code splitting
+- Optimize renders with React.memo
+- Use virtualization for long lists
+- Use React's React.lazy() and Suspense to load components only when needed
+- Prefer `useRef` over `useState` when tracking non-rendering data
+- Implement debouncing for search inputs and API requests like Google's autocomplete
+
+- **Virtualization**
+
+  - Use `@tanstack/react-virtual` or MUI DataGrid for large tables.
+
+- **Apollo cache**
+
+  - Tune type policies; avoid storing giant responses; normalize where possible.
+
+- **Images/assets**
+  - Prefer lazy loading.

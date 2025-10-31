@@ -1,0 +1,48 @@
+---
+description: Practical React hook guidelines for effects, memoization, refs vs state, and derived state.
+globs: src/**/*.{ts,tsx}
+alwaysApply: true
+---
+
+- **useEffect (last resort)**
+
+  - Do not use `useEffect` to memoize data or functions; prefer `useMemo`/`useCallback` when needed.
+  - Use `useEffect` for real side effects only: fetch after mount, subscriptions, timers, syncing with external systems.
+  - Avoid unstable dependencies. Extract stable functions/memos to reduce re-renders.
+  - Always clean up effects (unsubscribe/clear timers) in the returned cleanup function.
+
+- **useMemo and useCallback (only when expensive/unstable)**
+
+  - Use `useMemo` for expensive calculations or repeatedly filtered/sorted lists.
+  - Use `useCallback` for callbacks passed to memoized children or expensive event handlers.
+  - Do not wrap everything in memos—measure first. Remove ineffective memoization.
+
+- **Refs vs state**
+
+  - Prefer `useRef` for mutable values that should not trigger renders (scroll position, timeouts, observers).
+  - Use `useState` only for data that affects rendering.
+
+- **Derived state**
+
+  - Derive values with `useMemo` instead of duplicating state (e.g., computed totals, filtered lists).
+
+- **Async in React**
+
+  - Prefer server-state libraries (Apollo/React Query) over manual `fetch` in `useEffect`.
+  - For forms, centralize submit/validation side effects in adapters/services, not in the component.
+
+- **Examples**
+
+```tsx
+// Good: useMemo for an expensive calculation
+const sortedProducts = useMemo(() => sortProducts(products, sort), [products, sort]);
+
+// Good: stable useCallback for memoized child
+const handleRowClick = useCallback((id: string) => onSelect(id), [onSelect]);
+
+// Good: effect with cleanup
+useEffect(() => {
+  const id = setInterval(refetch, 60_000);
+  return () => clearInterval(id);
+}, [refetch]);
+```

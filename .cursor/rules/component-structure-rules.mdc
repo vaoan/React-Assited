@@ -1,0 +1,26 @@
+---
+description: Predictable, scalable component structure with clear separation of concerns and reusable building blocks.
+globs: src/**/*.{ts,tsx}
+alwaysApply: true
+---
+
+- One component per file
+- Strictly maximum 200 lines per component
+- Extract reusable logic to custom hooks
+- Split complex components into smaller ones
+- Avoid code duplication by creating common UI components (src/common/presentation/components)
+- Organize UI components into atoms, molecules, organisms, templates, and pages
+- Use semantic HTML, ARIA attributes, and test it
+- Use a central theme file for styling consistency [themeOptions.ts](mdc:src/common/presentation/themeOptions.ts)
+
+- **Container vs Presentational**
+
+  - Containers live in feature `presentation/pages` and wire adapters/hooks; presentational components live in `presentation/components`.
+
+- **Accessibility & theming**
+
+  - Prefer MUI components and props for accessibility. Provide `aria-*` labels where required.
+  - Use the shared theme for spacing/typography/colors. Avoid inline styles when possible.
+
+- **Composition**
+  - Prefer composition over inheritance. Pass children; avoid deep prop drilling—introduce context only when needed.

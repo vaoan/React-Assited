@@ -1,0 +1,25 @@
+---
+description: Predictable local-first state with minimal global stores and cached server state.
+globs: src/**/*.{ts,tsx}
+alwaysApply: true
+---
+
+- Keep component state local when possible
+- Document complex state interactions
+- Only use global state for data shared across multiple components
+- Avoid unnecessary network requests by leveraging Apollo Client's caching mechanism
+
+- **Server vs client state**
+
+  - Treat GraphQL data as server state; avoid copying it into global stores. Use Apollo cache/selectors.
+
+- **Derived/computed state**
+
+  - Compute on the fly with memoization; do not duplicate it in state.
+
+- **Forms**
+
+  - Use Formik/Yup for every form. Keep values local to the form component and submit via adapters.
+
+- **Context sparingly**
+  - Introduce Zustand only for cross-cutting concerns (theme, auth, feature flags). Avoid ad-hoc React Context for one-off props.

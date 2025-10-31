@@ -1,0 +1,261 @@
+---
+alwaysApply: true
+---
+
+ruleType: Agent Requested
+purpose: Canonicalize how to **create & use LaunchDarkly feature flags** in a repository.
+--------------------------------------------------------------------------------------
+
+# Cursor Rule — LaunchDarkly Feature Flags
+
+> **Goal**: When asked to create a new feature flag, *generate everything end‑to‑end*:
+>
+> 1. a **consistent key** (dot.case), 2) an **LD API payload** (JSON), 3) **code scaffolding** (typed key constants + React usage), 4) **docs & checks**.
+
+## Naming standard (authoritative)
+
+**Boolean flags must end with `.enabled`.** Use lowerCamel for inner tokens; use only letters & digits. **No hyphens** in keys.
+
+```
+<domain>.<area?>.<feature>.<facet?>.enabled
+```
+
+**Domains** (example domains that may be used): `orders`, `users`, `products`, `inventory`, `reports`, `settings`, `notifications`, `payments`, `shipping`, `dashboard`, `analytics`.
+
+**Examples (canonical):**
+
+* `orders.orderDetails.mock.enabled`
+* `orders.orderDetails.tab.enabled` *(rename of historical `orders-order-details-tab`)*
+* `products.singleItem.create.mockApi.enabled` *(rename of `products-single-item-create-mock-api-enabled`)*
+* `products.productTickets.create.mockApi.enabled`
+* `products.details.comments.enabled`
+* `products.details.documents.enabled`
+* `products.details.scheduler.enabled`
+* `products.details.siteInfo.enabled`
+* `products.details.summary.enabled`
+* `products.details.ticketsOverview.enabled`
+* `users.addNew.redirectAfterAdd.enabled`
+* `users.assignment.stayOnTab.enabled`
+* `inventory.addNew.redirectAfterAdd.enabled`
+* `inventory.assignment.stayOnTab.enabled`
+* `settings.addNew.redirectAfterAdd.enabled`
+* `settings.assignment.stayOnTab.enabled`
+* `notifications.addNew.redirectAfterAdd.enabled`
+* `notifications.assignment.stayOnTab.enabled`
+* `payments.addNew.redirectAfterAdd.enabled`
+* `payments.resourceAssignment.stayOnTab.enabled`
+* `shipping.masterList.enabled`
+* `shipping.categories.enabled`
+* `shipping.tags.enabled`
+* `reports.page.enabled`
+* `reports.summary.enabled`
+* `reports.details.enabled`
+* `dashboard.main.enabled`
+
+> **Legacy keys** with hyphens remain read‑only. For new work, follow the canonical pattern above. If you must migrate, ship the new key behind the old one, then remove the old key in a follow‑up ticket.
+
+## Current state analysis
+
+The existing codebase has **mixed naming patterns**:
+
+**Legacy hyphenated keys** (keep as-is):
+- `products-timeline-tab`, `inventory-availability-tab`, `analytics-dashboard-tab`
+- These are widely used and should not be changed
+
+**Modern dot.case keys** (preferred for new flags):
+- `payments.resourceAssignment.stayOnTab.enabled`, `inventory.assignment.stayOnTab.enabled`
+- `products.details.summary.enabled`, `products.details.comments.enabled`
+
+**Migration strategy**:
+1. **New flags**: Always use dot.case with `.enabled` suffix
+2. **Existing flags**: Leave unchanged to avoid breaking changes
+3. **When replacing functionality**: Create new dot.case flag, deprecate old one gradually
+
+> **note**: Some existing flags may not follow the new lowerCamelCase standard (e.g., legacy flags using different casing). This is fine for existing flags, but all new flags should follow the new standard.
+
+## What to output when asked: "Create a LaunchDarkly flag for …"
+
+When the user requests a flag, output **four artifacts**:
+
+### 1) Proposed flag metadata
+
+* **name**: Human‑readable (Title Case)
+* **key**: Canonical key per the standard above
+* **description**: one—two sentences, mention the ticket
+* **tags**: `domain:<domain>`, `type:<facet>` (e.g. `tab`, `mockApi`, `redirectAfterAdd`, `stayOnTab`), `owner:<initials>`, and any module tags (e.g., `products`)
+* **temporary**: `true` *(default; flags are typically removed after rollout)*
+
+### 2) LaunchDarkly API payload (JSON)
+
+Produce a **ready‑to‑POST** payload for `POST /api/v2/flags/:projectKey` (boolean variations). Include **client‑side availability** so the React SDK can evaluate it.
+
+```jsonc
+{
+  "name": "<Title Case Name>",
+  "key": "<domain.area.feature.facet.enabled>",
+  "description": "<what this gates + ticket>",
+  "clientSideAvailability": { "usingEnvironmentId": true, "usingMobileKey": false },
+  "temporary": true,
+  "variations": [
+    { "value": true,  "name": "On" },
+    { "value": false, "name": "Off" }
+  ],
+  "defaults": { "onVariation": 0, "offVariation": 1 },
+  "tags": ["domain:<domain>", "type:<facet>", "owner:<initials>", "module:<module>"]
+}
+```
+
+> **Env defaults**: If not specified, assume `local=on`, `dev=on`, `staging=on`, `prod=off`. Output the follow‑up **PATCH** commands (per env) to toggle state after creation.
+
+### 3) Code scaffolding (TypeScript)
+
+Update the existing feature flags file at `src/common/domain/constants/featureFlags.ts`:
+
+**Add to `FEATURE_FLAGS` object** – typed constants (follows existing pattern)
+
+```ts
+// src/common/domain/constants/featureFlags.ts
+export const FEATURE_FLAGS = {
+  // ... existing flags ...
+  
+  /**
+   * Controls [description of what this flag gates]
+   */
+  [CONSTANT_NAME]: 'domain.area.feature.facet.enabled',
+  
+  // ... rest of existing flags ...
+} as const;
+```
+
+**Constant naming pattern** (follow existing conventions):
+- Use `SCREAMING_SNAKE_CASE` for constant names
+- Group by domain with comments (e.g., `/* Products */`, `/* Inventory */`)
+- Use descriptive names that match the flag purpose
+- Examples: `PRODUCTS_TIMELINE_TAB`, `INVENTORY_ADD_NEW_SHOW_DETAILS`, `ORDERS_DETAILS_SUMMARY`
+
+**Add JSDoc comment** – follow existing pattern with clear description
+
+**Usage example in React** (using existing hooks)
+
+```tsx
+import { FEATURE_FLAGS } from '@/common/domain/constants/featureFlags';
+import { useFeatureFlag } from '@/common/presentation/hooks/useFeatureFlag';
+
+export function OrderDetails() {
+  const mock = useFeatureFlag(FEATURE_FLAGS.ORDERS_ORDERDETAILS_MOCK_ENABLED);
+  return mock ? <MockedCard /> : <RealCard />;
+}
+```
+
+**For multiple flags** (use existing `useFeatureFlags` hook):
+
+```tsx
+import { FEATURE_FLAGS } from '@/common/domain/constants/featureFlags';
+import { useFeatureFlags } from '@/common/presentation/hooks/useFeatureFlags';
+
+export function ComponentWithMultipleFlags() {
+  const flags = useFeatureFlags([
+    FEATURE_FLAGS.FLAG_ONE,
+    FEATURE_FLAGS.FLAG_TWO
+  ]);
+  
+  return (
+    <div>
+      {flags[FEATURE_FLAGS.FLAG_ONE] && <FeatureOne />}
+      {flags[FEATURE_FLAGS.FLAG_TWO] && <FeatureTwo />}
+    </div>
+  );
+}
+```
+
+### 4) Verification checklist (print at the end)
+
+* Key follows `<domain>.<area?>.<feature>.<facet?>.enabled` (no hyphens)
+* JSON payload has `clientSideAvailability`
+* Tags include `domain:*`, `type:*`, `owner:*`
+* Added to `FEATURE_FLAGS` object in `src/common/domain/constants/featureFlags.ts`
+* Added JSDoc comment following existing pattern
+* TypeScript types compile correctly (`FeatureFlagValue` type includes new flag)
+* UI guarded only at **render boundaries** (no dead code paths)
+* Added a kill‑switch path (feature off renders safe fallback)
+* Uses existing `useFeatureFlag` or `useFeatureFlags` hooks
+* Follows existing import patterns from `@/common/domain/constants/featureFlags`
+* **Flag not duplicating an existing one** (search codebase first)
+* **Add unit tests for flagged code paths**
+
+## Prompt pattern for developers (you can paste this)
+
+> **Create LaunchDarkly flag**
+>
+> * **Domain**: orders
+> * **Area**: orderDetails
+> * **Feature/Facet**: mock
+> * **Owner**: DEV
+> * **Ticket**: TICKET-1234
+> * **Description**: Gate the mocked API for Order Details.
+> * **Envs**: local=on, dev=on, staging=on, prod=off
+
+The assistant must output the 4 artifacts above, with the canonical key:
+`orders.orderDetails.mock.enabled`.
+
+## Migration guidance (when replacing a legacy hyphenated key)
+
+1. Ship new code reading **both** keys with new key taking precedence.
+2. Roll out the new key.
+3. Remove legacy references + archive the old flag.
+
+## Don'ts
+
+* ❌ Don't create keys with hyphens.
+* ❌ Don't omit `.enabled` for boolean flags.
+* ❌ Don't create flags without checking for existing duplicates first.
+* ❌ Don't skip unit tests for flagged code paths.
+
+---
+
+### Quick examples of common flag patterns
+
+* *Orders – Order details mock enabled* → `orders.orderDetails.mock.enabled`
+* *Orders – Order details tab* → `orders.orderDetails.tab.enabled`
+* *Products Single Item Create Mock Api Enabled* → `products.singleItem.create.mockApi.enabled`
+* *Product Tickets Create Mock Api Enabled* → `products.productTickets.create.mockApi.enabled`
+* *Users – Redirect To Details After Add* → `users.addNew.redirectAfterAdd.enabled`
+* *Users – Edit Stay On Tab* → `users.assignment.stayOnTab.enabled`
+* *Inventory – Redirect To Details After Add* → `inventory.addNew.redirectAfterAdd.enabled`
+* *Inventory – Edit Stay On Tab* → `inventory.assignment.stayOnTab.enabled`
+* *Settings – Redirect To Details After Add* → `settings.addNew.redirectAfterAdd.enabled`
+* *Settings – Edit Stay On Tab* → `settings.assignment.stayOnTab.enabled`
+* *Notifications – Redirect To Details After Add* → `notifications.addNew.redirectAfterAdd.enabled`
+* *Notifications – Edit Stay On Tab* → `notifications.assignment.stayOnTab.enabled`
+* *Payments – Redirect To Details After Add* → `payments.addNew.redirectAfterAdd.enabled`
+* *Payments – Edit Stay On Tab* → `payments.resourceAssignment.stayOnTab.enabled`
+* *Shipping – Master List* → `shipping.masterList.enabled`
+* *Shipping – Categories* → `shipping.categories.enabled`
+* *Shipping – Tags* → `shipping.tags.enabled`
+* *Reports Page* → `reports.page.enabled`
+* *Reports Summary* → `reports.summary.enabled`
+* *Reports Details* → `reports.details.enabled`
+* *Dashboard* → `dashboard.main.enabled`
+
+---
+
+## Integration with existing system
+
+The current codebase uses:
+- **LaunchDarkly React Client SDK v3.6.0** (`launchdarkly-react-client-sdk`)
+- **Centralized constants** in `src/common/domain/constants/featureFlags.ts`
+- **Custom hooks** in `src/common/presentation/hooks/`:
+  - `useFeatureFlag` - single flag with fallback
+  - `useFeatureFlags` - multiple flags with optimized batching
+  - `useFeatureFlagRedirect` - conditional navigation based on flags
+  - `useFilterTabsByFeatureFlags` - filter UI tabs by flag state
+
+## Optional: IDE‑native creation via MCP
+
+If the LaunchDarkly **MCP server** is configured in Cursor, also print a ready‑to‑run MCP tool call or natural‑language command that will:
+
+1. Create the flag in the specified **project** with the payload above.
+2. Turn it **on** in `local/dev/staging`, **off** in `prod`.
+3. Add tags and description.
+
+If MCP is unavailable, print a `curl` `POST /api/v2/flags/:projectKey` example and `PATCH` toggles per environment.

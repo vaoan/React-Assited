@@ -1,0 +1,84 @@
+---
+description: Enforce Clean Architecture boundaries: independent domain, application services/adapters, framework-agnostic business logic, and UI as a thin layer.
+globs: src/**/*.{ts,tsx}
+alwaysApply: true
+---
+
+- Separate business logic from UI components
+- Keep domain logic independent of frameworks
+- Use services for API calls and data manipulation
+- Follow unidirectional data flow
+- Consider the following module structure as an example when structuring code
+
+  ```
+  / users
+  ├── application
+  │    ├── adapters/        # Handles API logic, abstracts GraphQL calls
+  │    │    ├── createUser.ts
+  │    │    ├── deleteUser.ts
+  │    │    ├── getUser.ts
+  │    │    ├── getUserFormOptions.ts
+  │    │    ├── listUsers.ts
+  │    │    ├── updateUser.ts
+  │    ├── mappers/         # Transforms/filter data before UI usage
+  │    │    ├── filterSortMapper.ts
+  │    ├── UserFormValues.ts  # Schema for form handling
+  │
+  ├── infrastructure
+  │    ├── graphql/         # GraphQL queries/mutations, input to auto-generated hooks
+  │
+  ├── main/                 # Navigation and routing components
+  │    ├── UsersNavItems.tsx
+  │    ├── UsersRoutes.tsx
+  │
+  ├── presentation
+  │    ├── hooks/           # Custom React hooks
+  │    ├── pages/           # UI components/pages
+  │    ├── UserValidationSchema.ts  # Yup validation schema
+  ```
+
+  - Application Layer: Handles business logic and GraphQL API abstraction.
+  - Domain Layer: This layer defines core business and rules. This layer is mostly pure TS logic and does not contain API calls or UI components
+  - Infrastructure Layer: This layer handles external communication and data persistence. It uses GraphQL Codegen to generate strongly typed hooks for API interaction.
+  - Main Layer: This layer is responsible for the application's structure, navigation, and route management. Example Components in the Main Layer [UsersRoutes.tsx](mdc:src/users/main/UsersRoutes.tsx) (defines routes for different user-related pages) and [UsersNavItems.tsx](mdc:src/users/main/UsersNavItems.tsx) (handles menu items related to user management)
+  - Presentation Layer: Contains UI components, hooks, and validation schemas. Example: [UserList.tsx](mdc:src/users/presentation/components/UserList.tsx)
+  - Common Module: This module contains all main or shared functionalities used across different modules. It follows Clean Architecture principles by separating concerns into submodules:
+    ```
+        / common                # Shared utilities, components, and infrastructure
+    ├── application/       # Common business logic shared across modules
+    ├── domain/            # Shared domain models and entities
+    ├── infrastructure/
+    │    ├── gql/          # GraphQL-related utilities
+    │    │    ├── apollo/client.ts  # Apollo Client configuration
+    │    │    ├── generated/  # Auto-generated GraphQL Apollo hooks
+    ├── main/
+    ├── presentation/
+    │    ├── components/   # Reusable components
+    │    │    ├── forms/   # Reusable form components
+    │    │    ├── inputs/  # Common input elements
+    │    │    ├── Breadcrumbs.tsx
+    │    │    ├── TabsComponent.tsx
+    │    ├── hooks/    # Shared hooks for various modules
+    │    ├── themeOptions.ts  # Theme settings
+    ```
+
+- **Do**
+
+  - Keep `domain/` pure TypeScript (no React/Apollo). Place entities, value objects, and use cases here.
+  - `application/` orchestrates use cases and exposes adapters/hooks for UI.
+  - `infrastructure/` holds GraphQL documents, generated hooks, and gateways.
+  - `presentation/` renders UI; it cannot import from `infrastructure/` directly—go through `application/`.
+
+- **Don't**
+
+  - Import React/JSX into `domain/` or call mutation/query hooks from UI without an adapter.
+  - Leak Apollo types into UI; map them in `application/mappers`.
+
+- **DI and boundaries**
+
+  - Prefer small dependency containers per module (see `auth/main/DependencyInjection.ts`).
+  - Pass minimal interfaces across layers to reduce coupling.
+
+- **Testing guidance**
+  - Unit-test `domain/` with pure data; mock gateways in `application/`.
+  - Integration-test adapters with MSW and render `presentation/` using Testing Library.
